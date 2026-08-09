@@ -1,216 +1,176 @@
 import {
   db,
   names,
+  doc,
+  onSnapshot,
   collection,
   query,
-  where,
-  onSnapshot
+  where
 } from "./firebase.js";
 
-const $ = id => document.getElementById(id);
+const $ = id =>
+  document.getElementById(id);
 
-let stopQuestion = null;
+let stopLive = null;
 let stopVotes = null;
 
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  }[c]));
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replace(
+      /[&<>"']/g,
+      c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[c])
+    );
 }
+
+
+/* =========================================================
+   LIVE LISTENER
+========================================================= */
 
 function listen() {
 
-  const showsQuery =
-    query(
-      collection(
-        db,
-        names.SHOWS_COLLECTION
-      ),
-      where(
-        "status",
-        "==",
-        "live"
-      )
+  const liveRef =
+    doc(
+      db,
+      "live",
+      "current"
     );
 
-  onSnapshot(
-    showsQuery,
+  stopLive =
+    onSnapshot(
 
-    snapshot => {
+      liveRef,
 
-      if (!snapshot.docs.length) {
+      snapshot => {
+
+        if (!snapshot.exists()) {
+
+          showWaiting();
+
+          return;
+        }
+
+        const live =
+          snapshot.data();
+
+        if (live.active !== true) {
+
+          showWaiting();
+
+          return;
+        }
+
+        renderQuestion(live);
+
+        if (stopVotes) {
+          stopVotes();
+        }
+
+        const votesQuery =
+          query(
+            collection(
+              db,
+              names.VOTES_COLLECTION
+            ),
+            where(
+              "questionId",
+              "==",
+              live.questionId
+            )
+          );
+
+        stopVotes =
+          onSnapshot(
+
+            votesQuery,
+
+            voteSnapshot => {
+
+              renderResults(
+                live,
+                voteSnapshot
+              );
+            },
+
+            error => {
+
+              console.error(
+                "Live results error:",
+                error
+              );
+            }
+          );
+      },
+
+      error => {
+
+        console.error(
+          "Live document error:",
+          error
+        );
+
         showWaiting();
-        return;
       }
-
-      const showDoc =
-        snapshot.docs[0];
-
-      const show = {
-        id: showDoc.id,
-        ...showDoc.data()
-      };
-
-      $("liveShowName")
-        .textContent =
-        show.title || "";
-
-      if (stopQuestion) {
-        stopQuestion();
-      }
-
-      /*
-        Don't use orderBy here.
-      */
-
-      const questionsQuery =
-        query(
-          collection(
-            db,
-            names.QUESTIONS_COLLECTION
-          ),
-          where(
-            "showId",
-            "==",
-            show.id
-          ),
-          where(
-            "active",
-            "==",
-            true
-          )
-        );
-
-      stopQuestion =
-        onSnapshot(
-
-          questionsQuery,
-
-          questionSnapshot => {
-
-            if (
-              !questionSnapshot.docs.length
-            ) {
-
-              showWaiting();
-
-              return;
-            }
-
-            const questionDoc =
-              questionSnapshot.docs[0];
-
-            const question = {
-              id:
-                questionDoc.id,
-
-              ...questionDoc.data()
-            };
-
-            render(question);
-
-            if (stopVotes) {
-              stopVotes();
-            }
-
-            const votesQuery =
-              query(
-                collection(
-                  db,
-                  names.VOTES_COLLECTION
-                ),
-                where(
-                  "questionId",
-                  "==",
-                  question.id
-                )
-              );
-
-            stopVotes =
-              onSnapshot(
-                votesQuery,
-
-                voteSnapshot => {
-                  renderResults(
-                    question,
-                    voteSnapshot
-                  );
-                },
-
-                error => {
-                  console.error(
-                    "Live results error:",
-                    error
-                  );
-                }
-              );
-          },
-
-          error => {
-
-            console.error(
-              "Question listener error:",
-              error
-            );
-
-            showWaiting();
-          }
-        );
-    },
-
-    error => {
-
-      console.error(
-        "Show listener error:",
-        error
-      );
-
-      showWaiting();
-    }
-  );
-}
-
-function showWaiting() {
-
-  $("liveWaiting")
-    .classList
-    .remove("hidden");
-
-  $("liveQuestion")
-    .classList
-    .add("hidden");
-
-  $("liveShowName")
-    .textContent = "";
-}
-
-function render(question) {
-
-  $("liveWaiting")
-    .classList
-    .add("hidden");
-
-  $("liveQuestion")
-    .classList
-    .remove("hidden");
-
-  $("liveQuestionText")
-    .textContent =
-    question.text || "";
-
-  $("liveEyebrow")
-    .textContent =
-    "#LIVE · " +
-    (
-      question.type === "multiple"
-        ? "MULTIPLE ANSWERS"
-        : "LIVE VOTE"
     );
 }
+
+
+/* =========================================================
+   QUESTION DISPLAY
+========================================================= */
+
+function renderQuestion(question) {
+
+  $("liveWaiting")
+    ?.classList
+    .add("hidden");
+
+  $("liveQuestion")
+    ?.classList
+    .remove("hidden");
+
+  if ($("liveShowName")) {
+
+    $("liveShowName")
+      .textContent =
+      question.showTitle ||
+      "#LIVE";
+  }
+
+  if ($("liveQuestionText")) {
+
+    $("liveQuestionText")
+      .textContent =
+      question.text ||
+      "";
+  }
+
+  if ($("liveEyebrow")) {
+
+    $("liveEyebrow")
+      .textContent =
+      question.type === "multiple"
+        ? "#LIVE · MULTIPLE ANSWERS"
+        : "#LIVE · LIVE VOTE";
+  }
+}
+
+
+/* =========================================================
+   RESULTS
+========================================================= */
 
 function renderResults(
   question,
@@ -228,44 +188,48 @@ function renderResults(
 
   let total = 0;
 
-  snapshot.forEach(
-    vote => {
+  snapshot.forEach(vote => {
 
-      total++;
+    total++;
 
-      (
-        vote.data().answers || []
-      ).forEach(answer => {
+    (
+      vote.data().answers ||
+      []
+    ).forEach(answer => {
 
-        if (
-          counts[answer] != null
-        ) {
-          counts[answer]++;
-        }
+      if (counts[answer] != null) {
+        counts[answer]++;
+      }
 
-      });
-    }
-  );
+    });
+  });
 
-  $("liveVoteCount")
-    .textContent =
-    `${total} vote${
-      total === 1
-        ? ""
-        : "s"
-    }`;
 
-  $("liveOptions")
-    .innerHTML =
+  if ($("liveVoteCount")) {
+
+    $("liveVoteCount")
+      .textContent =
+      `${total} vote${
+        total === 1
+          ? ""
+          : "s"
+      }`;
+  }
+
+
+  if (!$("liveOptions")) {
+    return;
+  }
+
+
+  $("liveOptions").innerHTML =
     (question.options || [])
       .map(option => {
 
         const percentage =
           total
             ? Math.round(
-                counts[
-                  option.id
-                ] /
+                counts[option.id] /
                 total *
                 100
               )
@@ -275,7 +239,7 @@ function renderResults(
           <div class="live-option">
 
             <div class="live-option-name">
-              ${esc(option.text)}
+              ${escapeHtml(option.text)}
             </div>
 
             <div class="live-option-stat">
@@ -310,5 +274,46 @@ function renderResults(
       })
       .join("");
 }
+
+
+/* =========================================================
+   WAITING
+========================================================= */
+
+function showWaiting() {
+
+  $("liveWaiting")
+    ?.classList
+    .remove("hidden");
+
+  $("liveQuestion")
+    ?.classList
+    .add("hidden");
+
+  if ($("liveShowName")) {
+    $("liveShowName")
+      .textContent = "";
+  }
+
+  if ($("liveQuestionText")) {
+    $("liveQuestionText")
+      .textContent = "";
+  }
+
+  if ($("liveOptions")) {
+    $("liveOptions")
+      .innerHTML = "";
+  }
+
+  if ($("liveVoteCount")) {
+    $("liveVoteCount")
+      .textContent = "0 votes";
+  }
+}
+
+
+/* =========================================================
+   START
+========================================================= */
 
 listen();
