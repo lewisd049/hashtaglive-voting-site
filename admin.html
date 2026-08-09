@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08080b">
+  <title>#LIVE — Admin</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="admin">
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="https://hashtaglive.tdf1.uk/">#LIVE</a>
+      <div class="top-actions">
+        <a class="ghost-btn small" href="live.html" target="_blank">Open Live View</a>
+        <button id="logoutBtn" class="ghost-btn small hidden">Sign out</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section id="loginPanel" class="auth-card">
+        <div class="brand-mark">#LIVE</div>
+        <h1>Admin login</h1>
+        <p>Only authorised #LIVE administrators can access this area.</p>
+        <form id="loginForm">
+          <label>Email
+            <input id="email" type="email" autocomplete="username" required>
+          </label>
+          <label>Password
+            <input id="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="primary-btn wide" type="submit">SIGN IN</button>
+          <p id="loginError" class="error-text"></p>
+        </form>
+      </section>
+
+      <section id="adminApp" class="hidden">
+        <div class="admin-heading">
+          <div>
+            <div class="eyebrow">#LIVE ADMIN</div>
+            <h1>Live show control</h1>
+          </div>
+          <span class="pill live-pill" id="adminStatus">Offline</span>
+        </div>
+
+        <div class="admin-layout">
+          <aside class="panel sidebar">
+            <div class="section-head"><h2>Shows</h2><button id="newShowBtn" class="icon-btn">+</button></div>
+            <div id="showList" class="list"></div>
+          </aside>
+
+          <section class="panel editor">
+            <div class="section-head">
+              <h2 id="editorTitle">New show</h2>
+              <div class="inline-actions">
+                <button id="saveShowBtn" class="secondary-btn">Save show</button>
+                <button id="deleteShowBtn" class="danger-btn">Delete</button>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label>Show title<input id="showName" type="text" placeholder="Tonight's #LIVE"></label>
+              <label>Status
+                <select id="showStatus">
+                  <option value="draft">Draft</option>
+                  <option value="live">Live</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </label>
+            </div>
+
+            <hr>
+
+            <div class="section-head">
+              <h2>Questions</h2>
+              <button id="newQuestionBtn" class="secondary-btn">+ Add question</button>
+            </div>
+            <div id="questionList" class="question-list"></div>
+
+            <div id="questionEditor" class="question-editor hidden">
+              <div class="section-head">
+                <h2>Edit question</h2>
+                <div class="inline-actions">
+                  <button id="activateBtn" class="primary-btn">Activate</button>
+                  <button id="closeVoteBtn" class="secondary-btn">Close voting</button>
+                </div>
+              </div>
+              <label>Question
+                <textarea id="questionTextInput" rows="3" placeholder="Which song should we play?"></textarea>
+              </label>
+              <div class="form-grid">
+                <label>Question type
+                  <select id="questionType">
+                    <option value="single">Multiple Choice — one answer</option>
+                    <option value="multiple">Multiple Answers — choose several</option>
+                    <option value="yesno">Yes / No</option>
+                    <option value="rating">Rating — 1 to 5</option>
+                  </select>
+                </label>
+                <label>Order<input id="questionOrder" type="number" min="0" value="0"></label>
+              </div>
+              <label class="check-row"><input id="acceptVotes" type="checkbox"> Accept votes</label>
+              <label class="check-row"><input id="showResults" type="checkbox"> Show results to audience</label>
+              <div class="section-head"><h3>Answers</h3><button id="addOptionBtn" class="secondary-btn">+ Answer</button></div>
+              <div id="optionEditor" class="option-editor"></div>
+              <div class="inline-actions end">
+                <button id="saveQuestionBtn" class="primary-btn">Save question</button>
+                <button id="deleteQuestionBtn" class="danger-btn">Delete question</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel results-panel">
+          <div class="section-head">
+            <div><div class="eyebrow">LIVE RESULTS</div><h2 id="resultsTitle">Select a question</h2></div>
+            <span id="voteCount" class="vote-count">0 votes</span>
+          </div>
+          <div id="resultsBars" class="results"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

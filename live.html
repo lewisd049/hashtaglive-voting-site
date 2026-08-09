@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08080b">
+  <title>#LIVE — Live</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="live">
+  <div class="live-shell">
+    <header class="live-topbar">
+      <div class="brand">#LIVE</div>
+      <span id="liveShowName"></span>
+    </header>
+    <main class="live-main">
+      <section id="liveWaiting" class="center">
+        <div class="brand-mark">#LIVE</div>
+        <h1>Waiting for the next question…</h1>
+        <p>This screen updates automatically.</p>
+      </section>
+      <section id="liveQuestion" class="hidden">
+        <div class="eyebrow" id="liveEyebrow">#LIVE</div>
+        <h1 id="liveQuestionText" class="live-question"></h1>
+        <div id="liveOptions" class="live-options"></div>
+        <div class="live-footer">
+          <span id="liveVoteCount">0 votes</span>
+          <span>VOTE AT <strong>vote.hashtaglive.tdf1.uk</strong></span>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="js/live.js"></script>
+</body>
+</html>

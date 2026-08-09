@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08080b">
+  <title>#LIVE — Vote</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="vote">
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="https://hashtaglive.tdf1.uk/">#LIVE</a>
+      <span class="pill" id="connectionPill">Connecting…</span>
+    </header>
+    <main class="main">
+      <section id="loadingState" class="panel center">
+        <div class="spinner"></div>
+        <h1>Loading the live vote…</h1>
+        <p>Connecting to #LIVE.</p>
+      </section>
+
+      <section id="noQuestion" class="panel center hidden">
+        <div class="brand-mark">#LIVE</div>
+        <h1>No vote is live right now</h1>
+        <p>Please stay on this page. The next question will appear automatically.</p>
+      </section>
+
+      <section id="voteView" class="hidden">
+        <div class="eyebrow" id="showTitle">#LIVE</div>
+        <div class="question-meta">
+          <span id="questionNumber"></span>
+          <span id="voteType"></span>
+        </div>
+        <h1 class="question-title" id="questionText"></h1>
+        <p class="question-help" id="questionHelp"></p>
+        <form id="voteForm">
+          <div id="options" class="option-grid"></div>
+          <button class="primary-btn wide" id="submitBtn" type="submit">SUBMIT VOTE</button>
+        </form>
+        <div id="votedState" class="panel success-panel hidden">
+          <div class="success-icon">✓</div>
+          <h2>Vote submitted</h2>
+          <p id="votedMessage">Thanks for voting on #LIVE.</p>
+          <div id="publicResults" class="results hidden"></div>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">#LIVE · Live audience voting</footer>
+  </div>
+  <script type="module" src="js/vote.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function anonymousUser() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
+    match /admins/{uid} {
+      allow read: if isAdmin() && request.auth.uid == uid;
+      allow write: if isAdmin();
+    }
+
+    match /shows/{showId} {
+      allow read: if isAdmin()
+        || (resource.data.status == "live");
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /questions/{questionId} {
+      allow read: if isAdmin()
+        || (resource.data.active == true && resource.data.acceptVotes == true)
+        || (resource.data.active == true && resource.data.showResults == true);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /votes/{voteId} {
+      // Votes are readable only by admins. This keeps voter IDs/answers away
+      // from ordinary public clients. The live and public result pages in this
+      // starter therefore need the result-reading policy enabled below.
+      allow read: if isAdmin();
+      allow create: if anonymousUser()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.questionId is string
+        && request.resource.data.showId is string
+        && request.resource.data.answers is list
+        && request.resource.data.answers.size() > 0
+        && voteId == request.resource.data.questionId + "_" + request.auth.uid
+        && !exists(/databases/$(database)/documents/votes/$(voteId));
+      allow update, delete: if isAdmin();
+    }
+  }
+}
