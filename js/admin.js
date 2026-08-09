@@ -31,6 +31,11 @@ let stopVotes = null;
 
 let showsCache = [];
 
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, c => ({
     "&": "&amp;",
@@ -41,11 +46,13 @@ function esc(value) {
   }[c]));
 }
 
-/* =========================
-   AUTHENTICATION
-========================= */
+
+/* =========================================================
+   AUTH
+========================================================= */
 
 onAuthStateChanged(auth, async user => {
+
   currentUser = user;
 
   if (!user) {
@@ -54,73 +61,142 @@ onAuthStateChanged(auth, async user => {
   }
 
   try {
+
     const adminRef = doc(
       db,
       names.ADMIN_COLLECTION,
       user.uid
     );
 
-    const adminSnap = await getDoc(adminRef);
+    const adminSnap =
+      await getDoc(adminRef);
 
-    if (!adminSnap.exists() || adminSnap.data().role !== "admin") {
+    if (
+      !adminSnap.exists() ||
+      adminSnap.data().role !== "admin"
+    ) {
+
       await signOut(auth);
-      throw new Error("This account is not an administrator.");
+
+      throw new Error(
+        "This account is not an administrator."
+      );
     }
 
     showAdmin();
+
     subscribeShows();
 
   } catch (error) {
-    console.error("Admin authentication error:", error);
-    $("loginError").textContent = error.message;
-  }
-});
 
-function showLogin() {
-  $("loginPanel").classList.remove("hidden");
-  $("adminApp").classList.add("hidden");
-  $("logoutBtn").classList.add("hidden");
-}
-
-function showAdmin() {
-  $("loginPanel").classList.add("hidden");
-  $("adminApp").classList.remove("hidden");
-  $("logoutBtn").classList.remove("hidden");
-}
-
-$("loginForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  $("loginError").textContent = "";
-
-  try {
-    await signInWithEmailAndPassword(
-      auth,
-      $("email").value.trim(),
-      $("password").value
+    console.error(
+      "Admin authentication error:",
+      error
     );
-  } catch (error) {
-    console.error(error);
 
-    if (error.code?.includes("invalid-credential")) {
+    if ($("loginError")) {
       $("loginError").textContent =
-        "The email/password is incorrect.";
-    } else if (error.code?.includes("too-many-requests")) {
-      $("loginError").textContent =
-        "Too many attempts. Try again later.";
-    } else {
-      $("loginError").textContent =
-        error.message || "Sign-in failed.";
+        error.message;
     }
   }
 });
 
-$("logoutBtn").onclick = () => signOut(auth);
+
+function showLogin() {
+
+  $("loginPanel")
+    ?.classList
+    .remove("hidden");
+
+  $("adminApp")
+    ?.classList
+    .add("hidden");
+
+  $("logoutBtn")
+    ?.classList
+    .add("hidden");
+}
 
 
-/* =========================
+function showAdmin() {
+
+  $("loginPanel")
+    ?.classList
+    .add("hidden");
+
+  $("adminApp")
+    ?.classList
+    .remove("hidden");
+
+  $("logoutBtn")
+    ?.classList
+    .remove("hidden");
+}
+
+
+$("loginForm")?.addEventListener(
+  "submit",
+  async event => {
+
+    event.preventDefault();
+
+    if ($("loginError")) {
+      $("loginError").textContent = "";
+    }
+
+    try {
+
+      await signInWithEmailAndPassword(
+        auth,
+        $("email").value.trim(),
+        $("password").value
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      if ($("loginError")) {
+
+        if (
+          error.code?.includes(
+            "invalid-credential"
+          )
+        ) {
+
+          $("loginError").textContent =
+            "The email/password is incorrect.";
+
+        } else if (
+          error.code?.includes(
+            "too-many-requests"
+          )
+        ) {
+
+          $("loginError").textContent =
+            "Too many attempts. Try again later.";
+
+        } else {
+
+          $("loginError").textContent =
+            error.message ||
+            "Sign-in failed.";
+        }
+      }
+    }
+  }
+);
+
+
+$("logoutBtn")?.addEventListener(
+  "click",
+  () => signOut(auth)
+);
+
+
+/* =========================================================
    SHOWS
-========================= */
+========================================================= */
 
 function subscribeShows() {
 
@@ -128,466 +204,195 @@ function subscribeShows() {
     stopShows();
   }
 
-  const showsQuery = query(
-    collection(db, names.SHOWS_COLLECTION)
-  );
+  const showsQuery =
+    query(
+      collection(
+        db,
+        names.SHOWS_COLLECTION
+      )
+    );
 
-  stopShows = onSnapshot(
-    showsQuery,
+  stopShows =
+    onSnapshot(
 
-    snapshot => {
+      showsQuery,
 
-      showsCache = snapshot.docs
-        .map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        }))
-        .sort((a, b) => {
+      snapshot => {
 
-          const aTime =
-            a.updatedAt?.seconds ||
-            a.createdAt?.seconds ||
-            0;
+        showsCache =
+          snapshot.docs
+            .map(docSnap => ({
+              id: docSnap.id,
+              ...docSnap.data()
+            }))
+            .sort((a, b) => {
 
-          const bTime =
-            b.updatedAt?.seconds ||
-            b.createdAt?.seconds ||
-            0;
+              const aTime =
+                a.updatedAt?.seconds ||
+                a.createdAt?.seconds ||
+                0;
 
-          return bTime - aTime;
-        });
+              const bTime =
+                b.updatedAt?.seconds ||
+                b.createdAt?.seconds ||
+                0;
 
-      renderShows();
+              return bTime - aTime;
+            });
 
-      if (!currentShowId && showsCache.length) {
-        selectShow(showsCache[0].id);
+        renderShows();
+
+        if (
+          !currentShowId &&
+          showsCache.length
+        ) {
+
+          selectShow(
+            showsCache[0].id
+          );
+        }
+      },
+
+      error => {
+
+        console.error(
+          "Show listener error:",
+          error
+        );
+
+        if ($("showList")) {
+
+          $("showList").innerHTML = `
+            <div class="error-text">
+              Could not load shows:<br>
+              ${esc(error.message)}
+            </div>
+          `;
+        }
       }
-    },
-
-    error => {
-
-      console.error("Show listener error:", error);
-
-      $("showList").innerHTML = `
-        <div class="error-text">
-          Could not load shows:<br>
-          ${esc(error.message)}
-        </div>
-      `;
-    }
-  );
+    );
 }
 
+
 function renderShows() {
+
+  if (!$("showList")) return;
 
   $("showList").innerHTML = "";
 
   showsCache.forEach(show => {
 
-    const div = document.createElement("div");
+    const div =
+      document.createElement("div");
 
     div.className =
       `list-item ${
-        show.id === currentShowId ? "active" : ""
+        show.id === currentShowId
+          ? "active"
+          : ""
       }`;
 
     div.innerHTML = `
-      <strong>${esc(show.title || "Untitled show")}</strong>
-      <small>${esc(show.status || "draft")}</small>
+      <strong>
+        ${esc(
+          show.title ||
+          "Untitled show"
+        )}
+      </strong>
+
+      <small>
+        ${esc(
+          show.status ||
+          "draft"
+        )}
+      </small>
     `;
 
-    div.onclick = () => selectShow(show.id);
+    div.onclick =
+      () => selectShow(show.id);
 
-    $("showList").appendChild(div);
+    $("showList")
+      .appendChild(div);
   });
 }
+
 
 function selectShow(id) {
 
   currentShowId = id;
 
-  const show = showsCache.find(
-    item => item.id === id
-  );
+  const show =
+    showsCache.find(
+      item => item.id === id
+    );
 
   if (!show) return;
 
-  $("showName").value =
-    show.title || "";
+  if ($("showName")) {
+    $("showName").value =
+      show.title || "";
+  }
 
-  $("showStatus").value =
-    show.status || "draft";
+  if ($("showStatus")) {
+    $("showStatus").value =
+      show.status || "draft";
+  }
 
-  $("editorTitle").textContent =
-    show.title || "Edit show";
+  if ($("editorTitle")) {
+    $("editorTitle").textContent =
+      show.title ||
+      "Edit show";
+  }
 
-  $("adminStatus").textContent =
-    show.status === "live"
-      ? "LIVE"
-      : show.status || "Draft";
+  if ($("adminStatus")) {
 
-  $("adminStatus").className =
-    `pill ${
+    $("adminStatus").textContent =
       show.status === "live"
-        ? "live-pill"
-        : ""
-    }`;
+        ? "LIVE"
+        : show.status ||
+          "Draft";
+
+    $("adminStatus").className =
+      `pill ${
+        show.status === "live"
+          ? "live-pill"
+          : ""
+      }`;
+  }
 
   renderShows();
-
-  subscribeQuestions(id);
 
   currentQuestionId = null;
 
   clearQuestionEditor();
-}
 
-
-/* =========================
-   QUESTIONS
-========================= */
-
-function subscribeQuestions(showId) {
-
-  if (stopQuestions) {
-    stopQuestions();
-  }
-
-  /*
-    IMPORTANT:
-    We intentionally DON'T use:
-
-    orderBy("order")
-
-    here.
-
-    That combination with where("showId")
-    can require a Firestore composite index.
-
-    We sort the questions in JavaScript instead.
-  */
-
-  const questionsQuery = query(
-    collection(db, names.QUESTIONS_COLLECTION),
-    where("showId", "==", showId)
-  );
-
-  stopQuestions = onSnapshot(
-
-    questionsQuery,
-
-    snapshot => {
-
-      const questions = snapshot.docs
-        .map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        }))
-        .sort(
-          (a, b) =>
-            (Number(a.order) || 0) -
-            (Number(b.order) || 0)
-        );
-
-      $("questionList").innerHTML = "";
-
-      if (!questions.length) {
-
-        $("questionList").innerHTML = `
-          <div style="color:#a8a8b3;padding:15px 0;">
-            No questions yet.
-          </div>
-        `;
-
-        return;
-      }
-
-      questions.forEach(question => {
-
-        const div =
-          document.createElement("div");
-
-        div.className =
-          `question-item ${
-            question.id === currentQuestionId
-              ? "active"
-              : ""
-          }`;
-
-        div.innerHTML = `
-          <div>
-            <strong>
-              ${esc(
-                question.text ||
-                "Untitled question"
-              )}
-            </strong>
-
-            <small>
-              ${
-                question.active
-                  ? "ACTIVE · "
-                  : ""
-              }
-
-              ${esc(
-                question.type ||
-                "single"
-              )}
-            </small>
-          </div>
-
-          <span>
-            ${
-              question.active
-                ? "●"
-                : "○"
-            }
-          </span>
-        `;
-
-        div.onclick = () =>
-          editQuestion(question);
-
-        $("questionList")
-          .appendChild(div);
-      });
-    },
-
-    error => {
-
-      console.error(
-        "Question listener error:",
-        error
-      );
-
-      $("questionList").innerHTML = `
-        <div class="error-text">
-          <strong>
-            Could not load questions
-          </strong>
-          <br><br>
-          ${esc(error.message)}
-        </div>
-      `;
-    }
-  );
-}
-
-
-/* =========================
-   QUESTION EDITOR
-========================= */
-
-function clearQuestionEditor() {
-
-  $("questionEditor")
-    .classList
-    .add("hidden");
-
-  $("resultsTitle")
-    .textContent =
-    "Select a question";
-
-  $("resultsBars")
-    .innerHTML = "";
-
-  $("voteCount")
-    .textContent =
-    "0 votes";
-
-  if (stopVotes) {
-    stopVotes();
-    stopVotes = null;
-  }
-}
-
-function editQuestion(question) {
-
-  currentQuestionId =
-    question.id;
-
-  $("questionEditor")
-    .classList
-    .remove("hidden");
-
-  $("questionTextInput").value =
-    question.text || "";
-
-  $("questionType").value =
-    question.type || "single";
-
-  $("questionOrder").value =
-    question.order ?? 0;
-
-  $("acceptVotes").checked =
-    question.acceptVotes !== false;
-
-  $("showResults").checked =
-    !!question.showResults;
-
-  renderOptions(
-    question.options ||
-    defaultOptions(question.type)
-  );
-
-  subscribeVotes(question);
-
-  /*
-    Refresh question list so the
-    selected item is highlighted.
-  */
   subscribeQuestions(
     currentShowId
   );
 }
 
-function defaultOptions(type) {
 
-  if (type === "yesno") {
-
-    return [
-      {
-        id: "yes",
-        text: "Yes"
-      },
-      {
-        id: "no",
-        text: "No"
-      }
-    ];
-  }
-
-  if (type === "rating") {
-
-    return [1, 2, 3, 4, 5]
-      .map(number => ({
-        id: String(number),
-        text: String(number)
-      }));
-  }
-
-  return [
-    {
-      id: crypto.randomUUID(),
-      text: "Option A"
-    },
-    {
-      id: crypto.randomUUID(),
-      text: "Option B"
-    }
-  ];
-}
-
-function renderOptions(options) {
-
-  $("optionEditor")
-    .innerHTML = "";
-
-  options.forEach(option =>
-    addOptionRow(option)
-  );
-}
-
-function addOptionRow(
-  option = {
-    id: crypto.randomUUID(),
-    text: ""
-  }
-) {
-
-  const row =
-    document.createElement("div");
-
-  row.className =
-    "option-line";
-
-  row.dataset.id =
-    option.id;
-
-  row.innerHTML = `
-    <input
-      value="${esc(option.text)}"
-      placeholder="Answer"
-    >
-
-    <button
-      type="button"
-    >
-      Remove
-    </button>
-  `;
-
-  row.querySelector("button")
-    .onclick = () => row.remove();
-
-  $("optionEditor")
-    .appendChild(row);
-}
-
-$("addOptionBtn").onclick =
-  () => addOptionRow();
-
-$("questionType").onchange =
-  () => {
-
-    const type =
-      $("questionType").value;
-
-    if (
-      type === "yesno" ||
-      type === "rating"
-    ) {
-      renderOptions(
-        defaultOptions(type)
-      );
-    }
-  };
-
-
-/* =========================
-   NEW SHOW
-========================= */
-
-$("newShowBtn").onclick = () => {
-
-  currentShowId = null;
-  currentQuestionId = null;
-
-  $("showName").value =
-    "New #LIVE Show";
-
-  $("showStatus").value =
-    "draft";
-
-  $("editorTitle").textContent =
-    "New show";
-
-  $("questionList")
-    .innerHTML = "";
-
-  clearQuestionEditor();
-
-  renderShows();
-};
-
-
-/* =========================
+/* =========================================================
    SAVE SHOW
-========================= */
+========================================================= */
 
-$("saveShowBtn").onclick =
+$("saveShowBtn")?.addEventListener(
+  "click",
   async () => {
 
     try {
 
       const title =
         $("showName")
-          .value
+          ?.value
           .trim();
 
       if (!title) {
-        alert("Enter a show title.");
+
+        alert(
+          "Enter a show title."
+        );
+
         return;
       }
 
@@ -596,7 +401,8 @@ $("saveShowBtn").onclick =
         title,
 
         status:
-          $("showStatus").value,
+          $("showStatus")?.value ||
+          "draft",
 
         updatedAt:
           serverTimestamp(),
@@ -639,7 +445,9 @@ $("saveShowBtn").onclick =
           ref.id;
       }
 
-      alert("Show saved successfully.");
+      alert(
+        "Show saved successfully."
+      );
 
     } catch (error) {
 
@@ -653,14 +461,16 @@ $("saveShowBtn").onclick =
         error.message
       );
     }
-  };
+  }
+);
 
 
-/* =========================
+/* =========================================================
    DELETE SHOW
-========================= */
+========================================================= */
 
-$("deleteShowBtn").onclick =
+$("deleteShowBtn")?.addEventListener(
+  "click",
   async () => {
 
     if (!currentShowId)
@@ -683,6 +493,7 @@ $("deleteShowBtn").onclick =
       );
 
       currentShowId = null;
+      currentQuestionId = null;
 
       clearQuestionEditor();
 
@@ -695,14 +506,429 @@ $("deleteShowBtn").onclick =
         error.message
       );
     }
-  };
+  }
+);
 
 
-/* =========================
+/* =========================================================
+   QUESTIONS
+========================================================= */
+
+function subscribeQuestions(showId) {
+
+  if (stopQuestions) {
+    stopQuestions();
+  }
+
+  /*
+    IMPORTANT:
+
+    There is intentionally NO orderBy() here.
+
+    This avoids the Firestore composite-index
+    requirement caused by combining showId with orderBy.
+  */
+
+  const questionsQuery =
+    query(
+      collection(
+        db,
+        names.QUESTIONS_COLLECTION
+      ),
+      where(
+        "showId",
+        "==",
+        showId
+      )
+    );
+
+  stopQuestions =
+    onSnapshot(
+
+      questionsQuery,
+
+      snapshot => {
+
+        const questions =
+          snapshot.docs
+            .map(docSnap => ({
+              id: docSnap.id,
+              ...docSnap.data()
+            }))
+            .sort(
+              (a, b) =>
+                (Number(a.order) || 0) -
+                (Number(b.order) || 0)
+            );
+
+        if (!$("questionList"))
+          return;
+
+        $("questionList")
+          .innerHTML = "";
+
+        if (!questions.length) {
+
+          $("questionList")
+            .innerHTML = `
+              <div style="
+                color:#a8a8b3;
+                padding:15px 0;
+              ">
+                No questions yet.
+              </div>
+            `;
+
+          return;
+        }
+
+        questions.forEach(
+          question => {
+
+            const div =
+              document.createElement(
+                "div"
+              );
+
+            div.className =
+              `question-item ${
+                question.id ===
+                currentQuestionId
+                  ? "active"
+                  : ""
+              }`;
+
+            div.innerHTML = `
+              <div>
+
+                <strong>
+                  ${esc(
+                    question.text ||
+                    "Untitled question"
+                  )}
+                </strong>
+
+                <small>
+
+                  ${
+                    question.active
+                      ? "ACTIVE · "
+                      : ""
+                  }
+
+                  ${esc(
+                    question.type ||
+                    "single"
+                  )}
+
+                </small>
+
+              </div>
+
+              <span>
+                ${
+                  question.active
+                    ? "●"
+                    : "○"
+                }
+              </span>
+            `;
+
+            div.onclick =
+              () =>
+                editQuestion(
+                  question
+                );
+
+            $("questionList")
+              .appendChild(div);
+          }
+        );
+      },
+
+      error => {
+
+        console.error(
+          "Question listener error:",
+          error
+        );
+
+        if ($("questionList")) {
+
+          $("questionList")
+            .innerHTML = `
+              <div class="error-text">
+
+                <strong>
+                  Could not load questions
+                </strong>
+
+                <br><br>
+
+                ${esc(
+                  error.message
+                )}
+
+              </div>
+            `;
+        }
+      }
+    );
+}
+
+
+/* =========================================================
+   QUESTION EDITOR
+========================================================= */
+
+function clearQuestionEditor() {
+
+  $("questionEditor")
+    ?.classList
+    .add("hidden");
+
+  if ($("resultsTitle")) {
+    $("resultsTitle").textContent =
+      "Select a question";
+  }
+
+  if ($("resultsBars")) {
+    $("resultsBars").innerHTML = "";
+  }
+
+  if ($("voteCount")) {
+    $("voteCount").textContent =
+      "0 votes";
+  }
+
+  if (stopVotes) {
+    stopVotes();
+    stopVotes = null;
+  }
+}
+
+
+function editQuestion(question) {
+
+  currentQuestionId =
+    question.id;
+
+  $("questionEditor")
+    ?.classList
+    .remove("hidden");
+
+  if ($("questionTextInput")) {
+    $("questionTextInput").value =
+      question.text || "";
+  }
+
+  if ($("questionType")) {
+    $("questionType").value =
+      question.type || "single";
+  }
+
+  if ($("questionOrder")) {
+    $("questionOrder").value =
+      question.order ?? 0;
+  }
+
+  if ($("acceptVotes")) {
+    $("acceptVotes").checked =
+      question.acceptVotes !== false;
+  }
+
+  if ($("showResults")) {
+    $("showResults").checked =
+      question.showResults === true;
+  }
+
+  renderOptions(
+    question.options ||
+    defaultOptions(
+      question.type
+    )
+  );
+
+  subscribeVotes(
+    question
+  );
+
+  subscribeQuestions(
+    currentShowId
+  );
+}
+
+
+function defaultOptions(type) {
+
+  if (type === "yesno") {
+
+    return [
+      {
+        id: "yes",
+        text: "Yes"
+      },
+      {
+        id: "no",
+        text: "No"
+      }
+    ];
+  }
+
+  if (type === "rating") {
+
+    return [
+      1, 2, 3, 4, 5
+    ].map(number => ({
+      id: String(number),
+      text: String(number)
+    }));
+  }
+
+  return [
+    {
+      id:
+        crypto.randomUUID(),
+      text:
+        "Option A"
+    },
+    {
+      id:
+        crypto.randomUUID(),
+      text:
+        "Option B"
+    }
+  ];
+}
+
+
+function renderOptions(options) {
+
+  if (!$("optionEditor"))
+    return;
+
+  $("optionEditor")
+    .innerHTML = "";
+
+  options.forEach(
+    option =>
+      addOptionRow(option)
+  );
+}
+
+
+function addOptionRow(
+  option = {
+    id:
+      crypto.randomUUID(),
+    text: ""
+  }
+) {
+
+  const row =
+    document.createElement(
+      "div"
+    );
+
+  row.className =
+    "option-line";
+
+  row.dataset.id =
+    option.id;
+
+  row.innerHTML = `
+    <input
+      value="${esc(option.text)}"
+      placeholder="Answer"
+    >
+
+    <button
+      type="button"
+    >
+      Remove
+    </button>
+  `;
+
+  row.querySelector(
+    "button"
+  ).onclick =
+    () => row.remove();
+
+  $("optionEditor")
+    ?.appendChild(row);
+}
+
+
+$("addOptionBtn")?.addEventListener(
+  "click",
+  () => addOptionRow()
+);
+
+
+$("questionType")?.addEventListener(
+  "change",
+  () => {
+
+    const type =
+      $("questionType").value;
+
+    if (
+      type === "yesno" ||
+      type === "rating"
+    ) {
+
+      renderOptions(
+        defaultOptions(type)
+      );
+    }
+  }
+);
+
+
+/* =========================================================
+   NEW SHOW
+========================================================= */
+
+$("newShowBtn")?.addEventListener(
+  "click",
+  () => {
+
+    currentShowId = null;
+    currentQuestionId = null;
+
+    if ($("showName")) {
+      $("showName").value =
+        "New #LIVE Show";
+    }
+
+    if ($("showStatus")) {
+      $("showStatus").value =
+        "draft";
+    }
+
+    if ($("editorTitle")) {
+      $("editorTitle").textContent =
+        "New show";
+    }
+
+    if ($("questionList")) {
+      $("questionList")
+        .innerHTML = "";
+    }
+
+    clearQuestionEditor();
+
+    renderShows();
+  }
+);
+
+
+/* =========================================================
    NEW QUESTION
-========================= */
+========================================================= */
 
-$("newQuestionBtn").onclick =
+$("newQuestionBtn")?.addEventListener(
+  "click",
   () => {
 
     if (!currentShowId) {
@@ -717,37 +943,52 @@ $("newQuestionBtn").onclick =
     currentQuestionId = null;
 
     $("questionEditor")
-      .classList
+      ?.classList
       .remove("hidden");
 
-    $("questionTextInput").value =
-      "";
+    if ($("questionTextInput")) {
+      $("questionTextInput").value =
+        "";
+    }
 
-    $("questionType").value =
-      "single";
+    if ($("questionType")) {
+      $("questionType").value =
+        "single";
+    }
 
-    $("questionOrder").value =
-      $("questionList")
-        .children
-        .length;
+    if ($("questionOrder")) {
 
-    $("acceptVotes").checked =
-      true;
+      $("questionOrder").value =
+        $("questionList")
+          ?.children
+          ?.length || 0;
+    }
 
-    $("showResults").checked =
-      false;
+    if ($("acceptVotes")) {
+      $("acceptVotes").checked =
+        true;
+    }
+
+    if ($("showResults")) {
+      $("showResults").checked =
+        false;
+    }
 
     renderOptions(
-      defaultOptions("single")
+      defaultOptions(
+        "single"
+      )
     );
-  };
+  }
+);
 
 
-/* =========================
+/* =========================================================
    SAVE QUESTION
-========================= */
+========================================================= */
 
-$("saveQuestionBtn").onclick =
+$("saveQuestionBtn")?.addEventListener(
+  "click",
   async () => {
 
     if (!currentShowId) {
@@ -763,8 +1004,8 @@ $("saveQuestionBtn").onclick =
 
       const text =
         $("questionTextInput")
-          .value
-          .trim();
+          ?.value
+          ?.trim();
 
       if (!text) {
 
@@ -788,13 +1029,16 @@ $("saveQuestionBtn").onclick =
               crypto.randomUUID(),
 
             text:
-              row.querySelector("input")
-                .value
-                .trim()
+              row.querySelector(
+                "input"
+              )
+                ?.value
+                ?.trim() || ""
 
           }))
           .filter(
-            option => option.text
+            option =>
+              option.text
           );
 
       if (!options.length) {
@@ -814,22 +1058,28 @@ $("saveQuestionBtn").onclick =
         text,
 
         type:
-          $("questionType").value,
+          $("questionType")
+            ?.value ||
+          "single",
 
         order:
           Number(
-            $("questionOrder").value
+            $("questionOrder")
+              ?.value
           ) || 0,
 
         acceptVotes:
-          $("acceptVotes").checked,
+          $("acceptVotes")
+            ?.checked !== false,
 
         showResults:
-          $("showResults").checked,
+          $("showResults")
+            ?.checked === true,
 
         options,
 
-        active: false,
+        active:
+          false,
 
         updatedAt:
           serverTimestamp(),
@@ -837,11 +1087,6 @@ $("saveQuestionBtn").onclick =
         updatedBy:
           currentUser.uid
       };
-
-      /*
-        If editing an existing question,
-        preserve whether it is active.
-      */
 
       if (currentQuestionId) {
 
@@ -858,6 +1103,7 @@ $("saveQuestionBtn").onclick =
           existing.exists() &&
           existing.data().active === true
         ) {
+
           data.active = true;
         }
 
@@ -894,10 +1140,6 @@ $("saveQuestionBtn").onclick =
           ref.id;
       }
 
-      /*
-        Immediately reload the list.
-      */
-
       subscribeQuestions(
         currentShowId
       );
@@ -918,14 +1160,16 @@ $("saveQuestionBtn").onclick =
         error.message
       );
     }
-  };
+  }
+);
 
 
-/* =========================
+/* =========================================================
    DELETE QUESTION
-========================= */
+========================================================= */
 
-$("deleteQuestionBtn").onclick =
+$("deleteQuestionBtn")?.addEventListener(
+  "click",
   async () => {
 
     if (!currentQuestionId)
@@ -964,20 +1208,29 @@ $("deleteQuestionBtn").onclick =
         error.message
       );
     }
-  };
+  }
+);
 
 
-/* =========================
+/* =========================================================
    ACTIVATE QUESTION
-========================= */
+========================================================= */
 
-$("activateBtn").onclick =
+$("activateBtn")?.addEventListener(
+  "click",
   async () => {
 
     if (
       !currentQuestionId ||
       !currentShowId
-    ) return;
+    ) {
+
+      alert(
+        "Select a question first."
+      );
+
+      return;
+    }
 
     try {
 
@@ -996,17 +1249,48 @@ $("activateBtn").onclick =
           )
         );
 
+      const selectedDoc =
+        await getDoc(
+          doc(
+            db,
+            names.QUESTIONS_COLLECTION,
+            currentQuestionId
+          )
+        );
+
+      if (!selectedDoc.exists()) {
+
+        throw new Error(
+          "The selected question no longer exists."
+        );
+      }
+
+      const selectedQuestion = {
+
+        id:
+          selectedDoc.id,
+
+        ...selectedDoc.data()
+      };
+
       const batch =
         writeBatch(db);
 
+
+      /*
+        Make all questions inactive
+        except the selected one.
+      */
+
       snapshot.forEach(
-        question => {
+        questionDoc => {
 
           batch.update(
-            question.ref,
+            questionDoc.ref,
             {
+
               active:
-                question.id ===
+                questionDoc.id ===
                 currentQuestionId,
 
               updatedAt:
@@ -1016,9 +1300,9 @@ $("activateBtn").onclick =
         }
       );
 
+
       /*
-        Make sure the selected question
-        is definitely active.
+        Selected question becomes active.
       */
 
       batch.update(
@@ -1028,27 +1312,107 @@ $("activateBtn").onclick =
           currentQuestionId
         ),
         {
-          active: true,
-          acceptVotes: true,
+
+          active:
+            true,
+
+          acceptVotes:
+            true,
+
           updatedAt:
             serverTimestamp()
         }
       );
 
-      await batch.commit();
 
-      await updateDoc(
+      /*
+        THIS IS THE IMPORTANT FIX.
+
+        Public voting now reads
+        live/current rather than querying
+        the questions collection.
+      */
+
+      const liveRef =
+        doc(
+          db,
+          "live",
+          "current"
+        );
+
+
+      batch.set(
+        liveRef,
+        {
+
+          active:
+            true,
+
+          showId:
+            currentShowId,
+
+          questionId:
+            currentQuestionId,
+
+          text:
+            selectedQuestion.text ||
+            "",
+
+          type:
+            selectedQuestion.type ||
+            "single",
+
+          order:
+            Number(
+              selectedQuestion.order
+            ) || 0,
+
+          options:
+            selectedQuestion.options ||
+            [],
+
+          acceptVotes:
+            true,
+
+          showResults:
+            selectedQuestion.showResults ===
+            true,
+
+          updatedAt:
+            serverTimestamp(),
+
+          updatedBy:
+            currentUser.uid
+
+        },
+        {
+          merge: true
+        }
+      );
+
+
+      /*
+        Make the show live.
+      */
+
+      batch.update(
         doc(
           db,
           names.SHOWS_COLLECTION,
           currentShowId
         ),
         {
-          status: "live",
+
+          status:
+            "live",
+
           updatedAt:
             serverTimestamp()
         }
       );
+
+
+      await batch.commit();
 
       alert(
         "Question is now LIVE!"
@@ -1066,18 +1430,26 @@ $("activateBtn").onclick =
         error.message
       );
     }
-  };
+  }
+);
 
 
-/* =========================
+/* =========================================================
    CLOSE VOTING
-========================= */
+========================================================= */
 
-$("closeVoteBtn").onclick =
+$("closeVoteBtn")?.addEventListener(
+  "click",
   async () => {
 
-    if (!currentQuestionId)
+    if (!currentQuestionId) {
+
+      alert(
+        "Select a question first."
+      );
+
       return;
+    }
 
     try {
 
@@ -1088,12 +1460,45 @@ $("closeVoteBtn").onclick =
           currentQuestionId
         ),
         {
-          acceptVotes: false,
-          active: false,
+
+          acceptVotes:
+            false,
+
+          active:
+            false,
+
           updatedAt:
             serverTimestamp()
         }
       );
+
+
+      await setDoc(
+        doc(
+          db,
+          "live",
+          "current"
+        ),
+        {
+
+          active:
+            false,
+
+          acceptVotes:
+            false,
+
+          updatedAt:
+            serverTimestamp(),
+
+          updatedBy:
+            currentUser.uid
+
+        },
+        {
+          merge: true
+        }
+      );
+
 
       alert(
         "Voting closed."
@@ -1101,19 +1506,23 @@ $("closeVoteBtn").onclick =
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        "Close voting error:",
+        error
+      );
 
       alert(
         "Could not close voting:\n\n" +
         error.message
       );
     }
-  };
+  }
+);
 
 
-/* =========================
-   LIVE RESULTS
-========================= */
+/* =========================================================
+   ADMIN RESULTS
+========================================================= */
 
 function subscribeVotes(question) {
 
@@ -1121,10 +1530,12 @@ function subscribeVotes(question) {
     stopVotes();
   }
 
-  $("resultsTitle")
-    .textContent =
-    question.text ||
-    "Results";
+  if ($("resultsTitle")) {
+
+    $("resultsTitle").textContent =
+      question.text ||
+      "Results";
+  }
 
   const votesQuery =
     query(
@@ -1141,13 +1552,17 @@ function subscribeVotes(question) {
 
   stopVotes =
     onSnapshot(
+
       votesQuery,
 
       snapshot => {
 
         const counts =
           Object.fromEntries(
-            (question.options || [])
+            (
+              question.options ||
+              []
+            )
               .map(option => [
                 option.id,
                 0
@@ -1163,78 +1578,93 @@ function subscribeVotes(question) {
 
             (
               vote.data()
-                .answers || []
-            ).forEach(answer => {
+                .answers ||
+              []
+            ).forEach(
+              answer => {
 
-              if (
-                counts[answer] != null
-              ) {
-                counts[answer]++;
+                if (
+                  counts[answer] !=
+                  null
+                ) {
+
+                  counts[answer]++;
+                }
               }
-
-            });
+            );
           }
         );
 
-        $("voteCount")
-          .textContent =
-          `${total} vote${
-            total === 1
-              ? ""
-              : "s"
-          }`;
+        if ($("voteCount")) {
 
-        $("resultsBars")
-          .innerHTML =
-          (question.options || [])
-            .map(option => {
+          $("voteCount")
+            .textContent =
+            `${total} vote${
+              total === 1
+                ? ""
+                : "s"
+            }`;
+        }
 
-              const percentage =
-                total
-                  ? Math.round(
-                      counts[
-                        option.id
-                      ] /
-                      total *
-                      100
-                    )
-                  : 0;
+        if ($("resultsBars")) {
 
-              return `
-                <div class="result-row">
+          $("resultsBars")
+            .innerHTML =
+            (
+              question.options ||
+              []
+            )
+              .map(option => {
 
-                  <div class="result-head">
+                const percentage =
+                  total
+                    ? Math.round(
+                        counts[
+                          option.id
+                        ] /
+                        total *
+                        100
+                      )
+                    : 0;
 
-                    <span>
-                      ${esc(
-                        option.text
-                      )}
-                    </span>
+                return `
+                  <div class="result-row">
 
-                    <strong>
-                      ${percentage}%
-                      ·
-                      ${counts[
-                        option.id
-                      ]}
-                    </strong>
+                    <div class="result-head">
+
+                      <span>
+                        ${esc(
+                          option.text
+                        )}
+                      </span>
+
+                      <strong>
+                        ${percentage}%
+                        ·
+                        ${counts[
+                          option.id
+                        ]}
+                      </strong>
+
+                    </div>
+
+                    <div class="bar-track">
+
+                      <div
+                        class="bar"
+                        style="
+                          width:${percentage}%
+                        "
+                      ></div>
+
+                    </div>
 
                   </div>
+                `;
 
-                  <div class="bar-track">
-
-                    <div
-                      class="bar"
-                      style="width:${percentage}%"
-                    ></div>
-
-                  </div>
-
-                </div>
-              `;
-
-            })
-            .join("");
+              })
+              .join("");
+        }
       },
 
       error => {
@@ -1244,13 +1674,18 @@ function subscribeVotes(question) {
           error
         );
 
-        $("resultsBars")
-          .innerHTML = `
-            <div class="error-text">
-              Could not load results:
-              ${esc(error.message)}
-            </div>
-          `;
+        if ($("resultsBars")) {
+
+          $("resultsBars")
+            .innerHTML = `
+              <div class="error-text">
+                Could not load results:
+                ${esc(
+                  error.message
+                )}
+              </div>
+            `;
+        }
       }
     );
 }
