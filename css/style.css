@@ -21,6 +21,39 @@ button{cursor:pointer}
 .center h1{font-size:clamp(28px,5vw,48px);margin:12px 0}
 .center p,.auth-card p{color:var(--muted);line-height:1.6}
 .brand-mark{font-size:clamp(48px,9vw,100px);font-weight:950;letter-spacing:-6px;line-height:1}
+.hashtaglive-voting-qr {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.hashtaglive-voting-qr-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.hashtaglive-voting-qr-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.18);
+}
+
+.hashtaglive-voting-qr-code img {
+  display: block;
+  width: 220px;
+  height: 220px;
+}
+
+.hashtaglive-voting-qr-url {
+  margin-top: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
 .eyebrow{font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .pill{border:1px solid var(--line);border-radius:999px;padding:7px 11px;color:var(--muted);font-size:12px;font-weight:700}
 .live-pill{color:var(--success)}
